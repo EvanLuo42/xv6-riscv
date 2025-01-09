@@ -52,22 +52,12 @@ QFLAGS += -bios bootloader/rustsbi-qemu.bin
 QFLAGS += -device loader,file=bin/kernel,addr=0x80200000
 QFLAGS += -s -S
 
+all: $(BIN)/kernel.bin
+
 $(BIN)/kernel.bin: $(OBJS) $(OBJ) $(BIN) $K/kernel.ld
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $(BIN)/kernel $(OBJS)
 	$(OBJDUMP) -S $(BIN)/kernel > $(BIN)/kernel.asm
 	$(OBJDUMP) -t $(BIN)/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(BIN)/kernel.sym
-
-qemu: $(BIN)/kernel
-	$(QEMU) $(QFLAGS)
-
-lldb: $(BIN)/kernel
-	$(LLDB) $(BIN)/kernel
-
-$(OBJ):
-	mkdir -p $(OBJ)
-
-$(BIN):
-	mkdir -p $(BIN)
 
 $(OBJ)/%.o: $K/%.s | $(OBJ)
 	$(AS) -c -o $@ $<
@@ -75,7 +65,17 @@ $(OBJ)/%.o: $K/%.s | $(OBJ)
 $(OBJ)/%.o: $K/%.c | $(OBJ)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-all: $(BIN)/kernel
+$(BIN):
+	mkdir -p $(BIN)
+
+$(OBJ):
+	mkdir -p $(OBJ)
+
+qemu: $(BIN)/kernel
+	$(QEMU) $(QFLAGS)
+
+debug: $(BIN)/kernel
+	$(LLDB) $(BIN)/kernel --one-line "gdb-remote localhost:1234"
 	
 clean: $(BIN) $(OBJ)
 	rm -r $(BIN) $(OBJ)
